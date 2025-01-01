@@ -17,7 +17,7 @@ internalAlarmData['lastAlarmUpdate'] = 0;
 const pollIntervallSeconds = 15;
 
 const dataPoints = [{
-	'id': 'alarm',
+	'id': 'alarm.alarm',
 	'name': 'Alarm',
 	'type': 'boolean',
 	'role': 'indicator',
@@ -25,7 +25,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'title',
+	'id': 'alarm.title',
 	'name': 'Einsatzstichwort',
 	'type': 'string',
 	'role': 'text',
@@ -33,7 +33,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'text',
+	'id': 'alarm.text',
 	'name': 'Meldungstext',
 	'type': 'string',
 	'role': 'text',
@@ -41,7 +41,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'foreign_id',
+	'id': 'alarm.foreign_id',
 	'name': 'Einsatznummer',
 	'type': 'number',
 	'role': 'text',
@@ -49,7 +49,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'divera_id',
+	'id': 'alarm.divera_id',
 	'name': 'Einsatz ID',
 	'type': 'number',
 	'role': 'text',
@@ -57,7 +57,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'address',
+	'id': 'alarm.address',
 	'name': 'Adresse',
 	'type': 'string',
 	'role': 'text',
@@ -65,7 +65,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'lat',
+	'id': 'alarm.lat',
 	'name': 'Längengrad',
 	'type': 'number',
 	'role': 'text',
@@ -73,7 +73,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'lng',
+	'id': 'alarm.lng',
 	'name': 'Breitengrad',
 	'type': 'number',
 	'role': 'text',
@@ -81,7 +81,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'date',
+	'id': 'alarm.date',
 	'name': 'Alarmierungszeit',
 	'type': 'number',
 	'role': 'date',
@@ -89,7 +89,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'priority',
+	'id': 'alarm.priority',
 	'name': 'Priorität/Sonderrechte',
 	'type': 'boolean',
 	'role': 'indicator',
@@ -97,7 +97,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'addressed_users',
+	'id': 'alarm.addressed_users',
 	'name': 'Alarmierte Benutzer',
 	'type': 'string',
 	'role': 'text',
@@ -105,7 +105,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'addressed_groups',
+	'id': 'alarm.addressed_groups',
 	'name': 'Alarmierte Gruppen',
 	'type': 'string',
 	'role': 'text',
@@ -113,7 +113,7 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'addressed_vehicle',
+	'id': 'alarm.addressed_vehicle',
 	'name': 'Alarmierte Fahrzeuge',
 	'type': 'string',
 	'role': 'text',
@@ -121,12 +121,44 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'lastUpdate',
+	'id': 'info.lastUpdate',
 	'name': 'Letzte Aktualisierung',
 	'type': 'number',
 	'role': 'date',
 	'read': true,
 	'write': false
+},
+{
+	'id': 'status.id',
+	'name': 'Status ID',
+	'type': 'number',
+	'role': 'text',
+	'read': true,
+	'write': false
+},
+{
+	'id': 'status.name',
+	'name': 'Status Name',
+	'type': 'string',
+	'role': 'text',
+	'read': true,
+	'write': false
+},
+{
+	'id': 'status.note',
+	'name': 'Status Notiz',
+	'type': 'string',
+	'role': 'text',
+	'read': true,
+	'write': false
+},
+{
+	'id': 'status.set',
+	'name': 'Status setzen',
+	'type': 'number',
+	'role': 'value',
+	'read': false,
+	'write': true
 }];
 
 class Divera247 extends utils.Adapter {
@@ -295,7 +327,7 @@ class Divera247 extends utils.Adapter {
 				});
 
 				// Setting the update state
-				this.setState('lastUpdate', { val: Date.now(), ack: true });
+				this.setState('info.lastUpdate', { val: Date.now(), ack: true });
 
 				// Setting the alarm specific states when a new alarm is active and addressed to the configured divera user id
 				if (content.success && Object.keys(content.data.items).length > 0) {
@@ -376,7 +408,7 @@ class Divera247 extends utils.Adapter {
 					this.setState('info.connection', false, true);
 				}
 			}
-		);
+		);		
 
 		// Timeout and self call handling
 		this.refreshStateTimeout = this.refreshStateTimeout || setTimeout(() => {
@@ -390,19 +422,19 @@ class Divera247 extends utils.Adapter {
 	 * @param {{ title: string; text: string; foreign_id: number; id: number; address: string; lat: number; lng: number; date: number; priority: boolean; ucr_addressed: string[]; group: string[]; vehicle: string[]; }} alarmData
 	 */
 	setAdapterStates(alarmData) {
-		this.setState('title', { val: alarmData.title, ack: true });
-		this.setState('text', { val: alarmData.text, ack: true });
-		this.setState('foreign_id', { val: Number(alarmData.foreign_id), ack: true });
-		this.setState('divera_id', { val: Number(alarmData.id), ack: true });
-		this.setState('address', { val: alarmData.address, ack: true });
-		this.setState('lat', { val: Number(alarmData.lat), ack: true });
-		this.setState('lng', { val: Number(alarmData.lng), ack: true });
-		this.setState('date', { val: Number(alarmData.date)*1000, ack: true });
-		this.setState('priority', { val: alarmData.priority, ack: true });
-		this.setState('addressed_users', { val: alarmData.ucr_addressed.join(), ack: true });
-		this.setState('addressed_groups', { val: alarmData.group.join(), ack: true });
-		this.setState('addressed_vehicle', { val: alarmData.vehicle.join(), ack: true });
-		this.setState('alarm', { val: true, ack: true });
+		this.setState('alarm.title', { val: alarmData.title, ack: true });
+		this.setState('alarm.text', { val: alarmData.text, ack: true });
+		this.setState('alarm.foreign_id', { val: Number(alarmData.foreign_id), ack: true });
+		this.setState('alarm.divera_id', { val: Number(alarmData.id), ack: true });
+		this.setState('alarm.address', { val: alarmData.address, ack: true });
+		this.setState('alarm.lat', { val: Number(alarmData.lat), ack: true });
+		this.setState('alarm.lng', { val: Number(alarmData.lng), ack: true });
+		this.setState('alarm.date', { val: Number(alarmData.date)*1000, ack: true });
+		this.setState('alarm.priority', { val: alarmData.priority, ack: true });
+		this.setState('alarm.addressed_users', { val: alarmData.ucr_addressed.join(), ack: true });
+		this.setState('alarm.addressed_groups', { val: alarmData.group.join(), ack: true });
+		this.setState('alarm.addressed_vehicle', { val: alarmData.vehicle.join(), ack: true });
+		this.setState('alarm.alarm', { val: true, ack: true });
 	}
 
 	// Is called when adapter shuts down
