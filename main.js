@@ -153,12 +153,84 @@ const dataPoints = [{
 	'write': false
 },
 {
-	'id': 'status.set',
+	'id': 'status.set.number',
 	'name': 'Status setzen',
 	'type': 'number',
 	'role': 'value',
 	'read': false,
 	'write': true
+},
+{
+    'id': 'status.set.id',
+    'name': 'Status ID',
+    'type': 'number',
+    'role': 'value',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.vehicle',
+    'name': 'Vehicle ID',
+    'type': 'number',
+    'role': 'value',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.note',
+    'name': 'Note',
+    'type': 'string',
+    'role': 'text',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.reset_date',
+    'name': 'Reset Date',
+    'type': 'number',
+    'role': 'value',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.reset_to',
+    'name': 'Reset To',
+    'type': 'number',
+    'role': 'value',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.alarm_skip',
+    'name': 'Alarm Skip',
+    'type': 'boolean',
+    'role': 'switch',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.status_skip_statusplan',
+    'name': 'Status Skip Statusplan',
+    'type': 'boolean',
+    'role': 'switch',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.status_skip_geofence',
+    'name': 'Status Skip Geofence',
+    'type': 'boolean',
+    'role': 'switch',
+    'read': true,
+    'write': true
+},
+{
+    'id': 'status.set.set_status',
+    'name': 'Set Status Button',
+    'type': 'boolean',
+    'role': 'button',
+    'read': false,
+    'write': true
 }];
 
 class Divera247 extends utils.Adapter {
@@ -173,10 +245,13 @@ class Divera247 extends utils.Adapter {
 
 		this.on('ready', this.onReady.bind(this));
 		this.on('unload', this.onUnload.bind(this));
+		this.on('stateChange', this.onStateChange.bind(this));
 	}
 
 	async onReady() {
 		this.setState('info.connection', false, true);
+
+		await this.subscribeStatesAsync('*');
 
 		// Generating DataPoints for this adapter
 		dataPoints.forEach( (elm) => {
@@ -315,7 +390,7 @@ class Divera247 extends utils.Adapter {
 			responseType: 'json'
 		}).then(
 			(response) => {
-				const content = response.data;
+				const content = response.data.data;
 
 				// If last request failed set info.connection true again
 				// @ts-ignore
@@ -327,29 +402,20 @@ class Divera247 extends utils.Adapter {
 					}
 				});
 
-				if (content.success && Object.keys(content.data.items).length > 0) {
+				//this.log.debug(JSON.stringify(response.data.data.status.status_id, getCircularReplacer()));
+
+				if (response.data.success && Object.keys(content).length > 0) {
 
 					if (content.status && content.cluster && content.cluster.status) {
 						const statusId = content.status.status_id || 0;
 						const statusInfo = content.cluster.status[statusId];
 						const statusName = statusInfo ? statusInfo.name : 'Unbekannt';
 
-						setState('status.id', statusId, true);
-						setState('status.note', content.status.note || '', true);
-						setState('status.name', statusName, true);
-
-						this.log.debug(diveraAccessKey);
+						this.setState('status.id', statusId, true);
+						this.setState('status.note', content.status.note || '', true);
+						this.setState('status.name', statusName, true);
 					}
-				};
-
-
-				// Setting the update state
-				this.setState('info.lastUpdate', { val: Date.now(), ack: true });
-
-				// Setting the status specific states
-				// this.setState('status.id', { val: content.data.id, ack: true });
-				// this.setState('status.name', { val: content.data.name, ack: true });
-				// this.setState('status.note', { val: content.data.note, ack: true });
+				}
 			}
 		).catch(
 			(error) => {
@@ -504,6 +570,69 @@ class Divera247 extends utils.Adapter {
 		this.setState('alarm.addressed_groups', { val: alarmData.group.join(), ack: true });
 		this.setState('alarm.addressed_vehicle', { val: alarmData.vehicle.join(), ack: true });
 		this.setState('alarm.alarm', { val: true, ack: true });
+	}
+
+	async onStateChange(id, state) {
+		if (state && !state.ack) {
+			if (id === this.namespace + '.status.set.number') {
+				const statusNumber = state.val;
+				const url = `https://www.divera247.com/statusgeber.html?status=${statusNumber}&accesskey=${userData.diveraAPIToken}`;
+
+				try {
+					const response = await axios.get(url);
+					this.log.info(`Status set to ${statusNumber}: ${response.status}`);
+				} catch (error) {
+					this.log.error(`Failed to set status to ${statusNumber}: ${error.message}`);
+				}
+				this.setState('status.set.number', { val: null, ack: true });
+			}
+
+			if (id === this.namespace + '.status.set.set_status') {
+				const statusId = await this.getStateAsync(this.namespace + '.status.set.id');
+				const vehicle = await this.getStateAsync(this.namespace + '.status.set.vehicle');
+				const note = await this.getStateAsync(this.namespace + '.status.set.note');
+				const resetDate = await this.getStateAsync(this.namespace + '.status.set.reset_date');
+				const resetTo = await this.getStateAsync(this.namespace + '.status.set.reset_to');
+				const alarmSkip = await this.getStateAsync(this.namespace + '.status.set.alarm_skip');
+				const statusSkipStatusplan = await this.getStateAsync(this.namespace + '.status.set.status_skip_statusplan');
+				const statusSkipGeofence = await this.getStateAsync(this.namespace + '.status.set.status_skip_geofence');
+
+				const url = `https://www.divera247.com/api/v2/statusgeber/set-status?accesskey=${userData.diveraAPIToken}`;
+				const data = {
+					Status: {
+						id: statusId ? statusId.val : null,
+						vehicle: vehicle ? vehicle.val : null,
+						note: note ? note.val : '',
+						reset_date: resetDate ? resetDate.val : null,
+						reset_to: resetTo ? resetTo.val : null,
+						alarm_skip: alarmSkip ? alarmSkip.val : false,
+						status_skip_statusplan: statusSkipStatusplan ? statusSkipStatusplan.val : false,
+						status_skip_geofence: statusSkipGeofence ? statusSkipGeofence.val : false
+					}
+				};
+
+				try {
+					const response = await axios.post(url, data);
+					this.log.info(`Status set via POST: ${response.status}`);
+					// Reset states to null upon successful completion
+					this.setState(this.namespace + '.status.set.id', { val: null, ack: true });
+					this.setState(this.namespace + '.status.set.vehicle', { val: null, ack: true });
+					this.setState(this.namespace + '.status.set.note', { val: '', ack: true });
+					this.setState(this.namespace + '.status.set.reset_date', { val: null, ack: true });
+					this.setState(this.namespace + '.status.set.reset_to', { val: null, ack: true });
+					this.setState(this.namespace + '.status.set.alarm_skip', { val: false, ack: true });
+					this.setState(this.namespace + '.status.set.status_skip_statusplan', { val: false, ack: true });
+					this.setState(this.namespace + '.status.set.status_skip_geofence', { val: false, ack: true });
+					this.setState(this.namespace + '.status.set.set_status', { val: false, ack: true });
+				} catch (error) {
+					this.log.error(`Failed to set status via POST: ${error.message}`);
+				}
+			}
+		}
+	}
+
+	async onObjectChange(id, obj) {
+		this.log.debug(`object ${id} changed: ${JSON.stringify(obj)}`);
 	}
 
 	// Is called when adapter shuts down
