@@ -346,9 +346,9 @@ class Divera247 extends utils.Adapter {
 				this.setState('info.lastUpdate', { val: Date.now(), ack: true });
 
 				// Setting the status specific states
-				this.setState('status.id', { val: content.data.id, ack: true });
-				this.setState('status.name', { val: content.data.name, ack: true });
-				this.setState('status.note', { val: content.data.note, ack: true });
+				// this.setState('status.id', { val: content.data.id, ack: true });
+				// this.setState('status.name', { val: content.data.name, ack: true });
+				// this.setState('status.note', { val: content.data.note, ack: true });
 			}
 		).catch(
 			(error) => {
