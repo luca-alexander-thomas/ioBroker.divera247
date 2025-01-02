@@ -338,7 +338,7 @@ class Divera247 extends utils.Adapter {
 						setState('status.note', content.status.note || '', true);
 						setState('status.name', statusName, true);
 
-						this.log.debug('Status: ' + statusName);
+						this.log.debug(diveraAccessKey);
 					}
 				};
 
