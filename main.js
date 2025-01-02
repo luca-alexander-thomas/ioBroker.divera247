@@ -327,19 +327,20 @@ class Divera247 extends utils.Adapter {
 					}
 				});
 
-				
-				// Statusdaten aktualisieren
-				if (content.status && content.cluster && content.cluster.status) {
-					const statusId = content.status.status_id || 0;
-					const statusInfo = content.cluster.status[statusId];
-					const statusName = statusInfo ? statusInfo.name : 'Unbekannt';
+				if (content.success && Object.keys(content.data.items).length > 0) {
 
-					setState('status.id', statusId, true);
-					setState('status.note', content.status.note || '', true);
-					setState('status.name', statusName, true);
-				}
-				console.log('Daten erfolgreich aktualisiert.');
-				
+					if (content.status && content.cluster && content.cluster.status) {
+						const statusId = content.status.status_id || 0;
+						const statusInfo = content.cluster.status[statusId];
+						const statusName = statusInfo ? statusInfo.name : 'Unbekannt';
+
+						setState('status.id', statusId, true);
+						setState('status.note', content.status.note || '', true);
+						setState('status.name', statusName, true);
+
+						this.log.debug('Status: ' + statusName);
+					}
+				};
 
 
 				// Setting the update state
