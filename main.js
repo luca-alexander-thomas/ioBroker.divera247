@@ -305,6 +305,74 @@ class Divera247 extends utils.Adapter {
 	 * @param {string[]} diveraUserGroups
 	 */
 	async getDataFromApiAndSetObjects(diveraAccessKey, diveraFilterOnlyAlarmsForMyUser, diveraUserIDs, diveraUserGroups) {
+
+		// Caling the Pull API
+		// @ts-ignore
+		await axios({
+			method: 'get',
+			baseURL: 'https://www.divera247.com/',
+			url: '/api/v2/pull/all?accesskey=' + diveraAccessKey,
+			responseType: 'json'
+		}).then(
+			(response) => {
+				const content = response.data;
+
+				// If last request failed set info.connection true again
+				// @ts-ignore
+				this.getState('info.connection',  (err, state) => {
+					// @ts-ignore
+					if (!state.val) {
+						this.setState('info.connection', true, true);
+						this.log.debug('Reconnected to API');
+					}
+				});
+
+				
+				// Statusdaten aktualisieren
+				if (content.status && content.cluster && content.cluster.status) {
+					const statusId = content.status.status_id || 0;
+					const statusInfo = content.cluster.status[statusId];
+					const statusName = statusInfo ? statusInfo.name : 'Unbekannt';
+
+					setState('status.id', statusId, true);
+					setState('status.note', content.status.note || '', true);
+					setState('status.name', statusName, true);
+				}
+				console.log('Daten erfolgreich aktualisiert.');
+				
+
+
+				// Setting the update state
+				this.setState('info.lastUpdate', { val: Date.now(), ack: true });
+
+				// Setting the status specific states
+				this.setState('status.id', { val: content.data.id, ack: true });
+				this.setState('status.name', { val: content.data.name, ack: true });
+				this.setState('status.note', { val: content.data.note, ack: true });
+			}
+		).catch(
+			(error) => {
+				if (error.response) {
+					// The request was made and the server responded with a error status code
+					if (error.response.status == 403) {
+						this.log.error('Login not possible');
+						this.setState('info.connection', false, true);
+					} else {
+						this.log.warn('received error ' + error.response.status + ' response with content: ' + JSON.stringify(error.response.data));
+						this.setState('info.connection', false, true);
+					}
+				} else if (error.request) {
+					// The request was made but no response was received
+					this.log.error(error.message);
+					this.setState('info.connection', false, true);
+				} else {
+					// Something happened in setting up the request that triggered an Error
+					this.log.error(error.message);
+					this.setState('info.connection', false, true);
+				}
+			}
+		);
+
 		// Calling the alerting-server api
 		// @ts-ignore
 		await axios({
